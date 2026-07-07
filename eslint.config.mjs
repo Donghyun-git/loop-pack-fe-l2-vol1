@@ -12,7 +12,22 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated/build artifacts & cache
+    "coverage/**",
+    ".eslintcache",
   ]),
+  {
+    files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    rules: {
+      "no-unused-vars": "off",
+      "no-undef": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { ignoreRestSiblings: true }],
+      "no-console": ["error", { allow: ["error"] }],
+      "react/react-in-jsx-scope": "off",
+      "react/jsx-uses-react": "off",
+      "react-hooks/rules-of-hooks": "error",
+    },
+  },
 ]);
 
 export default eslintConfig;
