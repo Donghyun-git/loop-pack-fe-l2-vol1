@@ -57,17 +57,12 @@ const Trigger = ({ children }: DialogPartProps) => {
  * dialog 뒤에 깔리는 오버레이 입니다.
  * - portal로 body 태그 하위로 보냅니다.
  */
-const Overlay = ({ children }: DialogPartProps) => {
+const Overlay = () => {
   const { isOpen, setIsOpen } = useDialogContext();
 
   if (!isOpen) return null;
 
-  return createPortal(
-    <div onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/50">
-      {children}
-    </div>,
-    document.body,
-  );
+  return createPortal(<div onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/50" />, document.body);
 };
 
 /**
