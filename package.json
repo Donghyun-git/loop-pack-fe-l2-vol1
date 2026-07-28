@@ -11,7 +11,7 @@
     "build": "next build",
     "format": "prettier . -w --cache",
     "lint": "eslint --cache --fix",
-    "type": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
