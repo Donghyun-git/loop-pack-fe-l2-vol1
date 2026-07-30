@@ -1,12 +1,13 @@
 'use client';
 
 import { ProductCard } from '@/entities/product';
+import { AddToCartButton } from '@/features/add-to-cart';
+import { WishlistToggleButton } from '@/features/toggle-wishlist';
 import type { ProductListQuery } from '@/types/commerce';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { productListQueryOptions } from '@/services/queries/products';
 
-import { ProductCardActions } from '../../_components/ProductCardActions';
 import { DEFAULT_PAGE_SIZE } from '../_constants';
 
 /**
@@ -51,7 +52,12 @@ export function ProductList({ query, page, onPageChange }: ProductListProps) {
               <ProductCard
                 key={product.id}
                 product={product}
-                actions={<ProductCardActions productId={product.id} productName={product.name} />}
+                actions={
+                  <>
+                    <WishlistToggleButton productId={product.id} productName={product.name} />
+                    <AddToCartButton productId={product.id} productName={product.name} />
+                  </>
+                }
               />
             ))}
           </div>

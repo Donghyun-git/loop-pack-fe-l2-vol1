@@ -1,12 +1,12 @@
 'use client';
 
 import { ProductCard } from '@/entities/product';
+import { AddToCartButton } from '@/features/add-to-cart';
+import { WishlistToggleButton } from '@/features/toggle-wishlist';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
 import { homeQueryOptions } from '@/services/queries/home';
-
-import { ProductCardActions } from './ProductCardActions';
 
 /**
  * 홈 화면. 서버에서 prefetch된 캐시를 hydrate 받아 조회한다.
@@ -52,7 +52,12 @@ export function HomeView() {
                 <ProductCard
                   key={product.id}
                   product={product}
-                  actions={<ProductCardActions productId={product.id} productName={product.name} />}
+                  actions={
+                    <>
+                      <WishlistToggleButton productId={product.id} productName={product.name} />
+                      <AddToCartButton productId={product.id} productName={product.name} />
+                    </>
+                  }
                 />
               ))}
             </div>
