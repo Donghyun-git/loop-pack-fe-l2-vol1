@@ -5,14 +5,14 @@ import { Suspense } from 'react';
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import { ErrorBoundary } from 'react-error-boundary';
 
-import { HomeView } from './HomeView';
+import { HomePage } from './HomePage';
 
 /**
  * 홈 데이터 조회의 로딩, 에러 경계.
- * - 로딩: HomeView 의 useSuspenseQuery 가 suspend → Suspense fallback
+ * - 로딩: HomePage 의 useSuspenseQuery 가 suspend → Suspense fallback
  * - 에러: useSuspenseQuery 가 throw → ErrorBoundary fallback (reset 으로 리스트를 재요청할 수 있게)
  */
-export function HomeSection() {
+export function HomePageBoundary() {
   return (
     <QueryErrorResetBoundary>
       {({ reset }) => (
@@ -28,7 +28,7 @@ export function HomeSection() {
           )}
         >
           <Suspense fallback={<p className="week05-section">홈 데이터를 불러오는 중입니다…</p>}>
-            <HomeView />
+            <HomePage />
           </Suspense>
         </ErrorBoundary>
       )}

@@ -10,13 +10,6 @@ export type ProductListQuery = {
   pageSize?: number;
 };
 
-export type HomeResponse = {
-  banner: { title: string; description: string; image: string };
-  categories: Category[];
-  popularProducts: Product[];
-  newProducts: Product[];
-};
-
 export type ProductListResponse = {
   products: Product[];
   categories: Category[];

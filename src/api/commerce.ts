@@ -1,12 +1,7 @@
 import { apiClient } from '@/shared/api/apiClient';
-import type { HomeResponse, ProductListQuery, ProductListResponse } from '@/types/commerce';
+import type { ProductListQuery, ProductListResponse } from '@/types/commerce';
 
 import { toSearchQueryParams } from '@/utils/toSearchQueryParams';
-
-/**
- * 커머스 도메인 API 함수
- */
-export const fetchHome = () => apiClient.get<HomeResponse>('/home');
 
 /**
  * ProductListQuery(사용자 URL 상태)를 쿼리스트링으로 변환해 요청한다.

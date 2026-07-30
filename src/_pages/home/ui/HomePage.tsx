@@ -6,14 +6,14 @@ import { WishlistToggleButton } from '@/features/toggle-wishlist';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
-import { homeQueryOptions } from '@/services/queries/home';
+import { homeQueryOptions } from '../api/homeQueries';
 
 /**
  * 홈 화면. 서버에서 prefetch된 캐시를 hydrate 받아 조회한다.
- * 로딩, 에러는 상위 HomeSection 의 Suspense, ErrorBoundary 가 맡고,
+ * 로딩, 에러는 상위 HomePageBoundary 의 Suspense, ErrorBoundary 가 맡고,
  * 여기서는 데이터가 있는 성공 경로와 빈 상태만 다룬다.
  */
-export function HomeView() {
+export function HomePage() {
   const { data } = useSuspenseQuery(homeQueryOptions.list());
 
   const { banner, categories, popularProducts, newProducts } = data;
