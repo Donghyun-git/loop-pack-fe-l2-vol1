@@ -1,3 +1,5 @@
+import type { ApiErrorResponse } from './types';
+
 const API_BASE_URL = '/api';
 
 interface ApiClientOptions {
@@ -37,7 +39,7 @@ class ApiClient implements ApiClientOptions {
 
     if (!res.ok) {
       // API 계약상 실패 응답은 { message } 형태다. 있으면 그 메시지로, 없으면 상태코드로 실패시킨다.
-      const body = (await res.json().catch(() => null)) as { message?: string } | null;
+      const body = (await res.json().catch(() => null)) as Partial<ApiErrorResponse> | null;
       const message = body?.message ?? `GET ${url} 요청 실패: ${res.status}`;
 
       console.error(message);

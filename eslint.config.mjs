@@ -33,16 +33,19 @@ const eslintConfig = defineConfig([
   // 의존 방향: app → _pages → widgets → features → entities → shared
   // src/app 은 Next 라우팅 디렉터리이지만 의존 순서상 최상위라 app 타입으로 잡는다.
   //
-  // configs.recommended 를 깔고 시작한다. 이 preset 은 no-unknown-files /
-  // no-unknown-dependencies / no-ignored-dependencies 를 끈 상태로 두어,
-  // 프로젝트 일부가 아직 규칙을 안 지켜도 점진적으로 리팩토링할 수 있게 한다.
-  // 즉 아직 안 옮긴 폴더(api/ services/ store/ types/ utils/ lib/ components/)는
-  // 어떤 element 에도 안 잡혀 규칙이 적용되지 않는다. 레이어가 이사 오는 즉시 검증이 시작된다.
+  // 마이그레이션 중에는 configs.recommended 로 시작했다. 그 preset 은
+  // no-unknown-files / no-unknown-dependencies / no-ignored-dependencies 를 꺼두어
+  // 아직 안 옮긴 폴더가 미분류로 통과하게 해준다.
   //
-  // 마이그레이션(S7)이 끝나면 configs.strict 로 올린다. strict 는 위 세 규칙을 켜므로
-  // "옮기기를 빠뜨린 파일"이 no-unknown-files 로 기계적으로 드러난다.
+  // 전환이 끝나 configs.strict 로 올렸다. strict 는 위 세 규칙을 켜므로
+  // 어떤 레이어에도 속하지 않는 파일이 no-unknown-files 로 드러난다.
+  // 즉 "옮기기를 빠뜨린 파일"을 사람이 세지 않고 기계가 잡는다.
+  //
+  // ignores: 데모·예제는 전환 범위 밖으로 두기로 했으므로 검사 대상에서 제외한다.
+  // 이 경로를 빼지 않으면 범위 외 코드 때문에 strict 를 켤 수 없다.
   {
     files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/examples/**", "src/services/**", "src/shared/ui/**/components/*-demo.tsx"],
     plugins: { boundaries },
     // recommended 의 settings 는 elements 가 빈 배열이다. 여기서 실제 정의로 덮는다.
     settings: {
@@ -56,9 +59,9 @@ const eslintConfig = defineConfig([
       ],
     },
     rules: {
-      // rules 객체는 통째로 교체되므로 recommended 의 off 설정을 명시적으로 병합한다.
-      // (spread 를 빼면 no-unknown-* 가 preset 기본값으로 되살아나 마이그레이션 중 에러가 쏟아진다)
-      ...boundaries.configs.recommended.rules,
+      // rules 객체는 통째로 교체되므로 preset 의 설정을 명시적으로 병합한다.
+      // (spread 를 빼면 no-unknown-* 가 꺼진 채로 남아 strict 가 무의미해진다)
+      ...boundaries.configs.strict.rules,
       "boundaries/dependencies": [
         "error",
         {
