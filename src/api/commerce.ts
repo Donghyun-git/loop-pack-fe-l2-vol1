@@ -1,6 +1,5 @@
+import { apiClient } from '@/shared/api/apiClient';
 import type { HomeResponse, ProductListQuery, ProductListResponse } from '@/types/commerce';
-
-import { apiClient } from '@/api/apiClient';
 
 import { toSearchQueryParams } from '@/utils/toSearchQueryParams';
 
