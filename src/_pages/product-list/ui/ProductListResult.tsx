@@ -4,6 +4,7 @@ import { ProductCard } from '@/entities/product';
 import { AddToCartButton } from '@/features/add-to-cart';
 import { DEFAULT_PAGE_SIZE, type ProductListQuery } from '@/features/product-filter';
 import { WishlistToggleButton } from '@/features/toggle-wishlist';
+import { shouldEscalateToBoundary } from '@/shared/api/httpError';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { productListQueryOptions } from '../api/productListQueries';
@@ -13,7 +14,10 @@ import { productListQueryOptions } from '../api/productListQueries';
  *
  * keepPreviousData: 조건 변경 중에도 이전 목록을 유지해 깜빡임 없이 갱신한다.
  * (useSuspenseQuery는 placeholderData를 못 쓰므로 여기서는 useQuery를 쓴다.)
- * throwOnError: 에러는 상위 ErrorBoundary(ProductListPage)로 던진다.
+ *
+ * throwOnError: 5xx·네트워크만 상위 ErrorBoundary(ProductListPage)로 던진다.
+ * 4xx 는 사용자가 필터를 고쳐 빠져나올 수 있으므로 여기서 인라인으로 안내한다.
+ * 경계로 던지면 고칠 수단인 필터 폼까지 언마운트된다.
  */
 type ProductListProps = {
   query: ProductListQuery;
@@ -22,11 +26,22 @@ type ProductListProps = {
 };
 
 export function ProductListResult({ query, page, onPageChange }: ProductListProps) {
-  const { data, isPlaceholderData } = useQuery({
+  const { data, error, isPlaceholderData } = useQuery({
     ...productListQueryOptions.list(query),
     placeholderData: keepPreviousData,
-    throwOnError: true,
+    throwOnError: (queryError) => shouldEscalateToBoundary(queryError),
   });
+
+  // 여기 도달했다는 것은 경계로 올리지 않기로 한 에러(4xx)라는 뜻이다.
+  // 5xx·네트워크는 throwOnError 가 이미 던져 이 줄에 오지 않는다.
+  if (error !== null) {
+    return (
+      <section className="week05-section" aria-label="상품 검색 결과" role="alert">
+        <p>{error.message}</p>
+        <p>검색 조건을 바꾸면 다시 조회합니다.</p>
+      </section>
+    );
+  }
 
   if (!data) {
     return (

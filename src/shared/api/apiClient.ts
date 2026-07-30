@@ -1,3 +1,4 @@
+import { HttpError, NetworkError } from './httpError';
 import type { ApiErrorResponse } from './types';
 
 const API_BASE_URL = '/api';
@@ -35,16 +36,22 @@ class ApiClient implements ApiClientOptions {
   async get<T>(endpoint: string): Promise<T> {
     const url = this.resolveUrl(endpoint);
 
-    const res = await fetch(url);
+    let res: Response;
+
+    try {
+      res = await fetch(url);
+    } catch (cause) {
+      // 서버에 닿지도 못한 경우. HTTP 실패와 구분해야 호출부가 재시도 여부를 판단할 수 있다.
+      throw new NetworkError(`GET ${url} 요청이 네트워크 단계에서 실패했습니다.`, { cause });
+    }
 
     if (!res.ok) {
       // API 계약상 실패 응답은 { message } 형태다. 있으면 그 메시지로, 없으면 상태코드로 실패시킨다.
       const body = (await res.json().catch(() => null)) as Partial<ApiErrorResponse> | null;
       const message = body?.message ?? `GET ${url} 요청 실패: ${res.status}`;
 
-      console.error(message);
-
-      return Promise.reject(new Error(message));
+      // status 를 살려 던진다. 4xx/5xx 구분은 호출부의 판단 재료다.
+      throw new HttpError(res.status, message);
     }
 
     return res.json();
