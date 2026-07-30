@@ -1,7 +1,15 @@
-import type { ProductListQuery } from '@/types/commerce';
+import type { ProductListQuery } from '@/features/product-filter';
+import { apiClient } from '@/shared/api/apiClient';
 import { queryOptions } from '@tanstack/react-query';
 
-import { fetchProducts } from '@/api/commerce';
+import type { ProductListResponse } from '../model/types';
+import { toSearchQueryParams } from './toSearchQueryParams';
+
+/**
+ * scenario 는 검증 전용 제어값이라 여기 포함하지 않는다.
+ */
+const fetchProducts = (query: ProductListQuery) =>
+  apiClient.get<ProductListResponse>(`/products${toSearchQueryParams(query)}`);
 
 /**
  * 상품 목록 쿼리 팩토리.

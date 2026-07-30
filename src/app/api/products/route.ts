@@ -1,6 +1,7 @@
+import type { ProductListResponse } from '@/_pages/product-list/model/types';
 import { categories, products, waitForMockApi } from '@/app/api/_data/commerce';
 import type { ProductSort } from '@/entities/product';
-import type { ApiErrorResponse, MockApiScenario, ProductListResponse } from '@/types/commerce';
+import type { ApiErrorResponse, MockApiScenario } from '@/types/commerce';
 import { NextRequest, NextResponse } from 'next/server';
 
 const sortValues = ['latest', 'popular', 'price-asc', 'price-desc'] as const satisfies readonly ProductSort[];

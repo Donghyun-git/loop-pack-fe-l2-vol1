@@ -2,20 +2,18 @@
 
 import { ProductCard } from '@/entities/product';
 import { AddToCartButton } from '@/features/add-to-cart';
+import { DEFAULT_PAGE_SIZE, type ProductListQuery } from '@/features/product-filter';
 import { WishlistToggleButton } from '@/features/toggle-wishlist';
-import type { ProductListQuery } from '@/types/commerce';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
-import { productListQueryOptions } from '@/services/queries/products';
-
-import { DEFAULT_PAGE_SIZE } from '../_constants';
+import { productListQueryOptions } from '../api/productListQueries';
 
 /**
- * 상품 목록 "결과"만 담당한다. 필터 폼은 이 컴포넌트 밖(ProductListView)에 있다.
+ * 상품 목록 "결과"만 담당한다. 필터 폼은 이 컴포넌트 밖(features/product-filter)에 있다.
  *
  * keepPreviousData: 조건 변경 중에도 이전 목록을 유지해 깜빡임 없이 갱신한다.
  * (useSuspenseQuery는 placeholderData를 못 쓰므로 여기서는 useQuery를 쓴다.)
- * throwOnError: 에러는 상위 ErrorBoundary(ProductListView)로 던진다.
+ * throwOnError: 에러는 상위 ErrorBoundary(ProductListPage)로 던진다.
  */
 type ProductListProps = {
   query: ProductListQuery;
@@ -23,7 +21,7 @@ type ProductListProps = {
   onPageChange: (page: number) => void;
 };
 
-export function ProductList({ query, page, onPageChange }: ProductListProps) {
+export function ProductListResult({ query, page, onPageChange }: ProductListProps) {
   const { data, isPlaceholderData } = useQuery({
     ...productListQueryOptions.list(query),
     placeholderData: keepPreviousData,

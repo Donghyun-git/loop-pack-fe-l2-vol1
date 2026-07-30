@@ -1,15 +1,15 @@
 'use client';
 
 import type { ProductSort } from '@/entities/product';
-import type { ProductListQuery } from '@/types/commerce';
 import { parseAsInteger, parseAsString, parseAsStringLiteral, useQueryStates } from 'nuqs';
 
-import { CATEGORY_FILTER_VALUES, type CategoryFilter, DEFAULT_PAGE_SIZE, PRODUCT_SORT_VALUES } from '../_constants';
+import { CATEGORY_FILTER_VALUES, type CategoryFilter, DEFAULT_PAGE_SIZE, PRODUCT_SORT_VALUES } from '../config/filters';
+import type { ProductListQuery } from './types';
 
 /**
  * 검색 조건의 원본은 URL 이다(nuqs). 공유, 새로고침, 앞뒤 이동에서 복원되어야 하기 때문.
  * 기본 정렬도 'latest'로 두고, API 요청에 sort=latest 를 명시한다(sort 생략은 4주차 호환용)
- * 필터 값 목록은 피처 로컬 _constants의 SSOT를 사용한다
+ * 필터 값 목록은 같은 슬라이스 config의 SSOT를 사용한다
  * scenario 는 검증 전용 제어값이라 URL 상태, ProductListQuery 에 포함하지 않는다.
  */
 const defaultParsers = {
