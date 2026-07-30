@@ -1,8 +1,8 @@
 'use client';
 
+import { useCartStore } from '@/entities/cart';
+import { useWishlistStore } from '@/entities/wishlist';
 import Link from 'next/link';
-
-import { useCommerceStore } from '@/store/useCommerceStore';
 
 /**
  * 공통 헤더. 장바구니·위시리스트 "개수"만 selector로 구독한다.
@@ -10,8 +10,8 @@ import { useCommerceStore } from '@/store/useCommerceStore';
  * 상품 담김 여부는 여기서 구독하지 않으므로, 개별 상품 토글은 헤더를 리렌더하지 않는다.
  */
 export function Header() {
-  const wishList = useCommerceStore((state) => state.wishlist);
-  const cart = useCommerceStore((state) => state.cart);
+  const wishList = useWishlistStore((state) => state.wishlist);
+  const cart = useCartStore((state) => state.cart);
 
   return (
     <header className="week05-header">

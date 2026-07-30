@@ -1,6 +1,7 @@
 'use client';
 
-import { useCommerceStore } from '@/store/useCommerceStore';
+import { useCartStore } from '@/entities/cart';
+import { useWishlistStore } from '@/entities/wishlist';
 
 /**
  * 상품 카드의 담기·찜 행위 UI.
@@ -15,10 +16,10 @@ type ProductCardActionsProps = {
 };
 
 export function ProductCardActions({ productId, productName }: ProductCardActionsProps) {
-  const wishList = useCommerceStore((state) => state.wishlist);
-  const cart = useCommerceStore((state) => state.cart);
-  const toggleWishlist = useCommerceStore((state) => state.toggleWishlist);
-  const toggleCart = useCommerceStore((state) => state.toggleCart);
+  const wishList = useWishlistStore((state) => state.wishlist);
+  const cart = useCartStore((state) => state.cart);
+  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
+  const toggleCart = useCartStore((state) => state.toggleCart);
 
   const isWished = wishList.includes(productId);
   const isInCart = cart.includes(productId);
