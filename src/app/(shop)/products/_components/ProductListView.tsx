@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import type { ProductSort } from '@/types/commerce';
+import type { ProductSort } from '@/entities/product';
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import { ErrorBoundary } from 'react-error-boundary';
 

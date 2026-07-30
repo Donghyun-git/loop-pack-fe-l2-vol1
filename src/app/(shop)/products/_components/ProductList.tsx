@@ -1,11 +1,12 @@
 'use client';
 
+import { ProductCard } from '@/entities/product';
 import type { ProductListQuery } from '@/types/commerce';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { productListQueryOptions } from '@/services/queries/products';
 
-import { ProductCard } from '../../_components/ProductCard';
+import { ProductCardActions } from '../../_components/ProductCardActions';
 import { DEFAULT_PAGE_SIZE } from '../_constants';
 
 /**
@@ -47,7 +48,11 @@ export function ProductList({ query, page, onPageChange }: ProductListProps) {
           <p>총 {data.totalCount}개</p>
           <div className="week05-grid">
             {data.products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                actions={<ProductCardActions productId={product.id} productName={product.name} />}
+              />
             ))}
           </div>
           <nav className="week05-pagination" aria-label="페이지 이동">

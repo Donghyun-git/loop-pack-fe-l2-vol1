@@ -1,6 +1,7 @@
 'use client';
 
-import type { ProductListQuery, ProductSort } from '@/types/commerce';
+import type { ProductSort } from '@/entities/product';
+import type { ProductListQuery } from '@/types/commerce';
 import { parseAsInteger, parseAsString, parseAsStringLiteral, useQueryStates } from 'nuqs';
 
 import { CATEGORY_FILTER_VALUES, type CategoryFilter, DEFAULT_PAGE_SIZE, PRODUCT_SORT_VALUES } from '../_constants';

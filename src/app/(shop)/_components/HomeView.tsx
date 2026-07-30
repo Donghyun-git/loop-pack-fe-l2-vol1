@@ -1,11 +1,12 @@
 'use client';
 
+import { ProductCard } from '@/entities/product';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
 import { homeQueryOptions } from '@/services/queries/home';
 
-import { ProductCard } from './ProductCard';
+import { ProductCardActions } from './ProductCardActions';
 
 /**
  * 홈 화면. 서버에서 prefetch된 캐시를 hydrate 받아 조회한다.
@@ -48,7 +49,11 @@ export function HomeView() {
           ) : (
             <div className="week05-grid">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  actions={<ProductCardActions productId={product.id} productName={product.name} />}
+                />
               ))}
             </div>
           )}
