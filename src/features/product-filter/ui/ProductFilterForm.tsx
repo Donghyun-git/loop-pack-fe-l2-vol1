@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { ProductSort } from '@/entities/product';
 
 import { CATEGORY_FILTERS, type CategoryFilter, PRODUCT_SORTS } from '../config/filters';
-import { useProductListQuery } from '../model/useProductListQuery';
+import { useProductFilterState } from '../model/useProductFilterState';
 
 /**
  * 상품 목록 검색 조건 폼.
@@ -17,7 +17,7 @@ import { useProductListQuery } from '../model/useProductListQuery';
  * submit 시점에만 URL 에 반영한다.
  */
 export function ProductFilterForm() {
-  const { state, setSearch, setCategory, setSort, resetFilters } = useProductListQuery();
+  const { state, setSearch, setCategory, setSort, resetFilters } = useProductFilterState();
 
   const [searchDraft, setSearchDraft] = useState(state.q);
 

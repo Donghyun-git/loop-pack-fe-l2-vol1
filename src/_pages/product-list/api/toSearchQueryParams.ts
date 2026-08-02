@@ -1,4 +1,4 @@
-import type { ProductListQuery } from '@/features/product-filter';
+import type { ProductListQuery } from '../model/types';
 
 /**
  * ProductListQuery(사용자 URL 상태)를 상품 목록 API 쿼리스트링으로 변환한다.

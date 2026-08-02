@@ -1,9 +1,10 @@
 'use client';
 
-import { ProductFilterForm, useProductListQuery } from '@/features/product-filter';
+import { DEFAULT_PAGE_SIZE, ProductFilterForm, useProductFilterState } from '@/features/product-filter';
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import { ErrorBoundary } from 'react-error-boundary';
 
+import type { ProductListQuery } from '../model/types';
 import { ProductListResult } from './ProductListResult';
 
 /**
@@ -12,11 +13,22 @@ import { ProductListResult } from './ProductListResult';
  * 필터 폼은 ErrorBoundary 경계 밖에 둔다.
  * 조건을 바꾸면 결과 영역만 갈아 끼우고, 필터 폼은 항상 화면에 남는다.
  *
- * 폼과 여기서 useProductListQuery 를 각각 부르지만 상태가 갈라지지 않는다.
+ * 폼과 여기서 useProductFilterState 를 각각 부르지만 상태가 갈라지지 않는다.
  * 원본이 URL 이라 둘 다 같은 곳을 읽는다.
+ *
+ * 필터가 고른 값을 조회 조건으로 조립하는 것은 조회하는 쪽인 이 슬라이스의 일이다.
+ * pageSize 처럼 사용자가 고르지 않는 값이 여기서 붙는다.
  */
 export function ProductListPage() {
-  const { state, query, setPage } = useProductListQuery();
+  const { state, setPage } = useProductFilterState();
+
+  const query: ProductListQuery = {
+    q: state.q,
+    category: state.category,
+    sort: state.sort,
+    page: state.page,
+    pageSize: DEFAULT_PAGE_SIZE,
+  };
 
   return (
     <>

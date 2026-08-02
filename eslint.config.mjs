@@ -66,26 +66,60 @@ const eslintConfig = defineConfig([
         "error",
         {
           default: "disallow",
-          message: "FSD 의존 방향 위반: {{from.type}} → {{to.type}}",
+          message:
+            "FSD 경계 위반: {{from.type}} → {{to.type}}. " +
+            "의존 방향(상위→하위)이 맞는지, 같은 레이어의 다른 슬라이스를 부르지 않았는지, " +
+            "슬라이스를 Public API(index.ts)로 들어왔는지 확인한다.",
           policies: [
             // 규칙 ① 하위 레이어만 import 한다 (app → _pages → widgets → features → entities → shared)
+            // 규칙 ③ 그중 슬라이스가 있는 레이어(entities/features/widgets)는 index.ts 로만 들어온다.
+            //
+            // ③을 처음에는 "index.ts 를 둔 슬라이스와 두지 않은 슬라이스가 섞여 규칙이 복잡해진다"고
+            // 판단해 넣지 않았다. 실제로 세어 보니 틀린 판단이었다. entities 3 · features 3 · widgets 1 은
+            // 예외 없이 전부 index.ts 를 갖고 있고, 없는 곳은 _pages 와 shared 뿐인데
+            // 이 둘은 element type 이 달라 따로 줄 수 있다.
+            // (전용 boundaries/entry-point 규칙은 v7 에서 deprecated 라 셀렉터로 표현한다)
             {
               from: { element: { type: "app" } },
               allow: {
-                to: { element: { types: { anyOf: ["app", "pages", "widgets", "features", "entities", "shared"] } } },
+                to: {
+                  element: { types: { anyOf: ["widgets", "features", "entities"] }, fileInternalPath: "index.ts" },
+                },
+              },
+            },
+            {
+              from: { element: { type: "app" } },
+              allow: { to: { element: { types: { anyOf: ["app", "pages", "shared"] } } } },
+            },
+            {
+              from: { element: { type: "pages" } },
+              allow: {
+                to: {
+                  element: { types: { anyOf: ["widgets", "features", "entities"] }, fileInternalPath: "index.ts" },
+                },
               },
             },
             {
               from: { element: { type: "pages" } },
-              allow: { to: { element: { types: { anyOf: ["widgets", "features", "entities", "shared"] } } } },
+              allow: { to: { element: { type: "shared" } } },
             },
             {
               from: { element: { type: "widgets" } },
-              allow: { to: { element: { types: { anyOf: ["features", "entities", "shared"] } } } },
+              allow: {
+                to: { element: { types: { anyOf: ["features", "entities"] }, fileInternalPath: "index.ts" } },
+              },
+            },
+            {
+              from: { element: { type: "widgets" } },
+              allow: { to: { element: { type: "shared" } } },
             },
             {
               from: { element: { type: "features" } },
-              allow: { to: { element: { types: { anyOf: ["entities", "shared"] } } } },
+              allow: { to: { element: { type: "entities", fileInternalPath: "index.ts" } } },
+            },
+            {
+              from: { element: { type: "features" } },
+              allow: { to: { element: { type: "shared" } } },
             },
             {
               from: { element: { type: "entities" } },

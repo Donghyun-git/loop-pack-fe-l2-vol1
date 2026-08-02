@@ -1,8 +1,7 @@
-import type { ProductListQuery } from '@/features/product-filter';
 import { apiClient } from '@/shared/api/apiClient';
 import { queryOptions } from '@tanstack/react-query';
 
-import type { ProductListResponse } from '../model/types';
+import type { ProductListQuery, ProductListResponse } from '../model/types';
 import { toSearchQueryParams } from './toSearchQueryParams';
 
 /**

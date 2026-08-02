@@ -2,12 +2,13 @@
 
 import { ProductCard } from '@/entities/product';
 import { AddToCartButton } from '@/features/add-to-cart';
-import { DEFAULT_PAGE_SIZE, type ProductListQuery } from '@/features/product-filter';
+import { DEFAULT_PAGE_SIZE } from '@/features/product-filter';
 import { WishlistToggleButton } from '@/features/toggle-wishlist';
 import { shouldEscalateToBoundary } from '@/shared/api/httpError';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { productListQueryOptions } from '../api/productListQueries';
+import type { ProductListQuery } from '../model/types';
 
 /**
  * 상품 목록 "결과"만 담당한다. 필터 폼은 이 컴포넌트 밖(features/product-filter)에 있다.
