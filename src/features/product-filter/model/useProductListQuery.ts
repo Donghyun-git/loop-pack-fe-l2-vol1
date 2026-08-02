@@ -27,6 +27,13 @@ export const useProductListQuery = () => {
   const setSort = (sort: ProductSort) => setState({ sort, page: 1 });
   const setPage = (page: number) => setState({ page });
 
+  /**
+   * 모든 조건을 기본값으로 되돌린다.
+   * null 을 넘기면 nuqs 가 해당 파라미터를 URL 에서 제거하고 파서의 기본값으로 읽는다.
+   * 개별 setter 처럼 기본값을 여기 하드코딩하면 defaultParsers 와 두 벌이 된다.
+   */
+  const resetFilters = () => setState({ q: null, category: null, sort: null, page: null });
+
   const query: ProductListQuery = {
     q: state.q,
     category: state.category,
@@ -35,5 +42,5 @@ export const useProductListQuery = () => {
     pageSize: DEFAULT_PAGE_SIZE,
   };
 
-  return { state, query, setSearch, setCategory, setSort, setPage };
+  return { state, query, setSearch, setCategory, setSort, setPage, resetFilters };
 };

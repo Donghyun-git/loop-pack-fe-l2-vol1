@@ -17,9 +17,20 @@ import { useProductListQuery } from '../model/useProductListQuery';
  * submit 시점에만 URL 에 반영한다.
  */
 export function ProductFilterForm() {
-  const { state, setSearch, setCategory, setSort } = useProductListQuery();
+  const { state, setSearch, setCategory, setSort, resetFilters } = useProductListQuery();
 
   const [searchDraft, setSearchDraft] = useState(state.q);
+
+  // 되돌릴 조건이 있는지는 URL 상태와 입력 중인 draft 에서 파생한다. 따로 저장하지 않는다.
+  const hasActiveFilter =
+    state.q !== '' || state.category !== 'all' || state.sort !== 'latest' || state.page !== 1 || searchDraft !== '';
+
+  // searchDraft 는 마운트 시점에만 state.q 로 초기화되므로 URL 만 비우면 입력값이 남는다.
+  // 확정된 조건의 원본은 URL 이고 draft 는 이 폼의 임시값이라, 둘을 함께 비우는 것도 폼의 일이다.
+  const handleReset = () => {
+    setSearchDraft('');
+    resetFilters();
+  };
 
   return (
     <section className="week05-section">
@@ -65,6 +76,9 @@ export function ProductFilterForm() {
           </select>
         </label>
         <button type="submit">검색</button>
+        <button type="button" onClick={handleReset} disabled={!hasActiveFilter}>
+          조건 초기화
+        </button>
       </form>
     </section>
   );
