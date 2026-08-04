@@ -7,6 +7,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
 import { homeQueryOptions } from '../api/homeQueries';
+import { HeroSection } from './HeroSection';
 
 /**
  * 홈 화면. 서버에서 prefetch된 캐시를 hydrate 받아 조회한다.
@@ -26,8 +27,7 @@ export function HomePage() {
   return (
     <>
       <section className="week05-hero">
-        <p>{banner.description}</p>
-        <h1>{banner.title}</h1>
+        <HeroSection title={banner.title} description={banner.description} />
       </section>
 
       <section className="week05-section">
