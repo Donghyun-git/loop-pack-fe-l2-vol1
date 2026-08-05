@@ -1,0 +1,53 @@
+/*
+ * 최초 진입 pending.
+ * 실제 카드와 같은 골격(정사각 이미지 + 브랜드·이름·가격 3줄 + 버튼 줄)을 그려
+ * 목록이 몇 개나 올지 미리 보이게 하고, 교체 때 자리도 밀리지 않게 한다.
+ */
+.skeletonCard {
+  display: grid;
+  gap: 8px;
+}
+
+.skeletonCard > span {
+  display: block;
+  background: rgb(33 27 23 / 8%);
+}
+
+.skeletonImage {
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.skeletonBrand {
+  width: 40%;
+  height: 1em;
+}
+
+.skeletonName {
+  width: 80%;
+  height: 1.2em;
+}
+
+.skeletonPrice {
+  width: 55%;
+  height: 1.2em;
+}
+
+.skeletonActions {
+  width: 70%;
+  height: 34px;
+}
+
+/* 갱신 중. 목록은 그대로 두고 아직 이전 결과임을 눈에 보이게 표시한다. */
+.updating {
+  opacity: 0.45;
+  transition: opacity 120ms ease-out;
+}
+
+.status {
+  color: #5b5348;
+}
+
+.retryButton {
+  margin-left: 8px;
+}
