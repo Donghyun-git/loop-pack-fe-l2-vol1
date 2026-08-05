@@ -7,6 +7,11 @@
   background: #d8cebf;
 }
 
+/* picture 는 레이아웃에 관여하지 않는다. 자리를 잡는 것은 안쪽 img 다. */
+.picture {
+  display: contents;
+}
+
 .image {
   display: block;
   width: 100%;
