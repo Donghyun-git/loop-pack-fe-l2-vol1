@@ -5,9 +5,46 @@ import { HeroCopy, HeroCopyFallback } from '@/_pages/home/ui/HeroCopy';
 import { HeroSection } from '@/_pages/home/ui/HeroSection';
 import { HomePageBoundary } from '@/_pages/home/ui/HomePageBoundary';
 import { getQueryClient } from '@/shared/api/queryClient';
+import { COMMON_OPEN_GRAPH, toOpenGraphImages } from '@/shared/config/siteMetadata';
 import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * 홈 metadata.
+ *
+ * 본문과 같은 query factory(homeQueryOptions)로 조회한다. 같은 render 안에서
+ * URL·options 가 같은 native fetch 는 memoization 되므로, 본문 prefetch 와
+ * 이 조회가 Route Handler 를 두 번 때리지 않는다.
+ *
+ * 조회가 실패하면 페이지별 빈 값을 만들지 않고 빈 객체를 돌려준다.
+ * 그러면 root layout 의 공통 metadata 가 그대로 상속된다.
+ *
+ * 비용: generateMetadata 는 HTML 첫 바이트보다 먼저 끝나야 하므로
+ * 여기서 기다리는 시간이 그대로 TTFB 에 실린다. 본문 스트리밍으로 없앤 대기가
+ * 여기서 돌아오는지는 측정으로 확인한다(문서 4장).
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const queryClient = getQueryClient();
+
+  try {
+    const { banner } = await queryClient.fetchQuery(homeQueryOptions.list());
+
+    return {
+      title: banner.title,
+      description: banner.description,
+      openGraph: {
+        ...COMMON_OPEN_GRAPH,
+        title: banner.title,
+        description: banner.description,
+        images: toOpenGraphImages(banner.image, banner.title),
+      },
+    };
+  } catch {
+    return {};
+  }
+}
 
 /**
  * 홈

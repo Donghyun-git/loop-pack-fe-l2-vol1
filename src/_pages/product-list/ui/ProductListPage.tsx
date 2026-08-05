@@ -1,11 +1,12 @@
 'use client';
 
-import { DEFAULT_PAGE_SIZE, ProductFilterForm, useProductFilterState } from '@/features/product-filter';
+import { ProductFilterForm, useProductFilterState } from '@/features/product-filter';
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import { parseAsStringLiteral, useQueryState } from 'nuqs';
 import { ErrorBoundary } from 'react-error-boundary';
 
-import { PRODUCT_LIST_SCENARIOS, type ProductListQuery } from '../model/types';
+import { toProductListQuery } from '../model/toProductListQuery';
+import { PRODUCT_LIST_SCENARIOS } from '../model/types';
 import { ProductListResult } from './ProductListResult';
 
 /**
@@ -28,14 +29,7 @@ export function ProductListPage() {
   const { state, setPage } = useProductFilterState();
   const [scenario] = useQueryState('scenario', parseAsStringLiteral(PRODUCT_LIST_SCENARIOS));
 
-  const query: ProductListQuery = {
-    q: state.q,
-    category: state.category,
-    sort: state.sort,
-    page: state.page,
-    pageSize: DEFAULT_PAGE_SIZE,
-    scenario: scenario ?? undefined,
-  };
+  const query = toProductListQuery(state, scenario ?? undefined);
 
   return (
     <>

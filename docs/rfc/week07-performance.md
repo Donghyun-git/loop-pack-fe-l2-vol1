@@ -223,7 +223,71 @@ curl -s --max-time 0.3 http://localhost:3000/ | grep -o '<h1>[^<]*</h1>'
 curl -s --max-time 0.3 http://localhost:3000/ | grep -c 'hero-original\.jpg'
 ```
 
-#### ④ sharp — 크롭 구도 검증
+#### ④ middleware — Route Handler 호출 횟수
+
+`src/app/**` 는 과제 제공 코드라 수정하지 않기로 했으므로 Route Handler 에 로그를 넣을 수 없다.
+대신 **요청이 서버로 들어오는 자리**에서 센다.
+
+서버가 보내는 `fetch('http://localhost:3000/api/home')` 은 자기 자신에게 보내는 진짜 HTTP 요청이라
+다시 들어올 때 middleware 를 통과한다. `src/middleware.ts` 는 `app/api` 밖이므로 제약에 걸리지 않는다.
+
+```ts
+// src/middleware.ts — 계측용 임시 파일
+import { type NextRequest, NextResponse } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  console.error(`[count] ${request.nextUrl.pathname}${request.nextUrl.search}`);
+  return NextResponse.next();
+}
+
+export const config = { matcher: '/api/:path*' };
+```
+
+```bash
+pnpm build && pnpm start
+curl -s -o /dev/null http://localhost:3000/     # 페이지 1회 요청
+# 터미널에 찍힌 [count] 줄 수 = Route Handler 호출 횟수
+```
+
+**왜 이 자리여야 하는가** — `shared/api/apiClient.ts` 에 카운터를 넣으면 **memoization 이전**을
+세게 되어 홈에서 2가 나온다. Next 의 fetch memoization 은 요청을 보내기 전에 중복을 제거하므로,
+실제 Route Handler 도달 횟수를 보려면 요청이 나간 뒤인 **서버 진입 지점**에서 세야 한다.
+
+**계측 제거**: `src/middleware.ts` 파일 하나만 지우면 된다. 앱 코드에는 흔적이 남지 않는다.
+
+> Next 16 은 이 파일 규약을 `proxy` 로 개명 중이며 `middleware` 이름은 빌드 시 deprecated 경고를 낸다.
+> 계측용으로 잠깐 쓰고 지우는 파일이라 그대로 두었다.
+
+**시도했다가 쓸 수 없었던 방법**
+
+| 방법                                                  | 결과                                                             |
+| ----------------------------------------------------- | ---------------------------------------------------------------- |
+| `next start` 기본 로그                                | 요청 로그를 남기지 않는다                                        |
+| `next.config` 의 `logging.fetches`·`incomingRequests` | **개발 모드 전용.** production 에서는 아무것도 찍히지 않는다     |
+| `nc -l` 로 요청만 받기                                | 응답을 주지 않으면 React Query 가 retry 해서 횟수가 부풀려진다   |
+| 별도 카운팅 프록시(:3100) + `APP_ORIGIN` 변경         | 동작하지만 프로세스·재빌드·터미널이 늘어난다. middleware 로 대체 |
+
+#### ⑤ curl — User-Agent 별 응답 시점
+
+```bash
+curl -s -o /dev/null -w 'normal   start=%{time_starttransfer}s total=%{time_total}s\n' "$APP_ORIGIN/"
+curl -A 'facebookexternalhit/1.1' -s -o /dev/null \
+  -w 'facebook start=%{time_starttransfer}s total=%{time_total}s\n' "$APP_ORIGIN/"
+```
+
+첫 청크에 무엇이 들어 있는지는 스트리밍 도중에 끊어서 본다.
+
+```bash
+curl -s --max-time 0.1 "$APP_ORIGIN/" | grep -c '<title>'   # 0 이면 나중 청크로 온다
+curl -s "$APP_ORIGIN/" | grep -c '<title>'                  # 1 이면 최종 HTML 에는 있다
+curl -A 'facebookexternalhit/1.1' -s --max-time 0.1 "$APP_ORIGIN/" | wc -c   # 0 이면 블로킹
+```
+
+DevTools 로도 같은 것을 볼 수 있다. Network 탭 → `⌘⇧P` → `Show Network conditions`
+→ `Use browser default` 해제 → `facebookexternalhit/1.1` 입력 후 재로드하고,
+document 행의 `Timing` 탭에서 `Waiting for server response` 와 `Content Download` 길이를 비교한다.
+
+#### ⑥ sharp — 크롭 구도 검증
 
 미리 자른 후보가 CSS 가 실제로 보여주는 영역과 같은지는 수치로 잡히지 않아 픽셀로 대조했다.
 표시 크기·원본 크기·`object-position` 으로 CSS 가 보여줄 구간을 역산해 원본에서 잘라내고,
@@ -1078,9 +1142,34 @@ const data = current.data ?? fallback.data;
 
 **서버 측 호출 계수** (`src/app/api/**` 수정 금지 제약하의 대안)
 
-| 방법 | 동일 slow Route Handler 호출 횟수 | 계측 제거 여부 |
-| ---- | --------------------------------- | -------------- |
-|      |                                   |                |
+계측 방법과 이 자리에서 재야 하는 이유는 0장 "수치를 얻은 방법 ④" 에 있다.
+
+| 페이지 요청                                | Route Handler 호출 URL                                                        | 횟수  |
+| ------------------------------------------ | ----------------------------------------------------------------------------- | ----- |
+| `/`                                        | `/api/home`                                                                   | **1** |
+| `/products?category=fashion&scenario=slow` | `/api/products?category=fashion&sort=latest&page=1&pageSize=12&scenario=slow` | **1** |
+| `/products?q=가방`                         | `/api/products?q=가방&category=all&sort=latest&page=1&pageSize=12`            | **1** |
+
+세 번째 줄이 **URL 정규화가 실제로 적용된 증거**이기도 하다. 검색어만 준 요청인데
+`category=all&sort=latest&page=1&pageSize=12` 가 붙어 나간다. metadata 와 본문이
+같은 `toProductListQuery` 를 통과했다는 뜻이다.
+
+**홈은 두 곳에서 같은 데이터를 조회하는데도 1회다.**
+
+```tsx
+generateMetadata()  → queryClient.fetchQuery(homeQueryOptions.list())    // banner 용
+HomePage()          → queryClient.prefetchQuery(homeQueryOptions.list()) // 본문 용
+```
+
+`getQueryClient()` 는 호출할 때마다 새 QueryClient 를 만들므로 두 조회는 **React Query 캐시를 공유하지 않는다.**
+그런데도 Route Handler 가 한 번만 불린 것은, 같은 render/request 안에서
+URL·options 가 모두 같은 native `fetch` 를 Next 가 memoization 하기 때문이다.
+중복 제거가 일어나는 층은 React Query 가 아니라 **fetch** 다.
+
+→ metadata 와 본문이 데이터를 공유하게 하려고 QueryClient 를 singleton 으로 바꿀 이유가 없다.
+같은 URL·options 로만 부르면 fetch 층이 이미 그 일을 한다.
+
+**계측 제거**: `src/middleware.ts` 파일 하나를 지우면 끝난다. 앱 코드에는 흔적이 남지 않는다.
 
 **일반 UA vs `facebookexternalhit`**
 
