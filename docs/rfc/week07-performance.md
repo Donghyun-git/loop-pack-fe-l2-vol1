@@ -565,6 +565,142 @@ if (error !== null) {
 - 되돌렸다면 그 이유:
 -->
 
+### 변경 1 — 렌더링 경계를 데이터 소유권대로 나눈다 (가설 A)
+
+**왜**
+
+- 관찰: No throttling LCP 701ms 중 TTFB 가 513ms(73%)다. `/api/home` 은 브라우저 Network 에 없고, filmstrip 상 그 전까지 화면에 아무것도 없다.
+- 가설: 홈 페이지가 `await queryClient.prefetchQuery` 로 홈 데이터를 다 받고서야 HTML 을 내보낸다. 제목·설명처럼 홈 데이터와 무관한 것까지 mock API 의 500ms 를 함께 기다린다.
+- 선택: 요청 우선순위(preload·`fetchpriority`)는 고르지 않았다. `Resource load delay` 가 16ms 라 줄일 몫이 없다. 이미지 최적화도 이 시점의 1차 표적이 아니다 — 전송 구간은 89ms 였다.
+
+**AS-IS**
+
+```tsx
+// app/(shop)/page.tsx
+export default async function HomePage() {
+  const queryClient = getQueryClient();
+  await queryClient.prefetchQuery(homeQueryOptions.list()); // ← HTML 을 막는다
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <HomePageBoundary /> {/* Suspense 하나가 Hero·카테고리·상품을 통째로 감쌈 */}
+    </HydrationBoundary>
+  );
+}
+```
+
+- 초기 HTML 에 `h1` 이 없다 (Hero 통합 때 `h1` 이 `h2` 로 대체됨)
+- 홈 데이터를 기다리는 동안 화면 전체가 로딩 문구 하나로 대체된다
+
+**TO-BE**
+
+경계를 넷으로 나눈다. 홈 데이터를 기다려야 하는 것만 기다린다.
+
+```
+페이지 제목·설명   정적          → 초기 HTML
+Hero 배경 이미지   정적          → 초기 HTML  (브라우저가 즉시 발견해 요청)
+Hero 문구          banner        → Suspense
+카테고리·상품 목록  나머지 응답    → Suspense (HomePageBoundary)
+```
+
+- `await` 제거 → 쿼리가 pending 상태로 dehydrate 되어 promise 째 전달된다.
+  `shared/api/queryClient.ts` 의 `shouldDehydrateQuery` 가 pending 을 포함시키는 것이 전제다
+- `HeroSection` 을 데이터 받지 않는 뼈대(`children`)로 바꾸고, 문구만 `HeroCopy` 로 분리
+- 소실됐던 `h1` 을 정적 문구로 복구
+
+**확인**
+
+두 단계로 나눠 측정했다. **1차는 거의 실패였다.**
+
+| 단계   | 변경                    | FCP    | LCP        | CLS    |
+| ------ | ----------------------- | ------ | ---------- | ------ |
+| Before | —                       | 618 ms | 701 ms     | 0      |
+| A1     | `await` 제거 + 껍데기만 | 67 ms  | **662 ms** | 0      |
+| A2     | 경계까지 분리           | 86 ms  | **178 ms** | 0.0066 |
+
+A1 에서 LCP 가 39ms 밖에 줄지 않았다. 구간을 보면 **500ms 가 사라진 게 아니라 옮겨갔다.**
+
+| 구간                   | Before | A1      | A2  |
+| ---------------------- | ------ | ------- | --- |
+| Time to first byte     | 513    | **5**   | 5   |
+| Resource load delay    | 16     | **507** | 32  |
+| Resource load duration | 89     | 35      | 55  |
+| Element render delay   | 107    | 86      | 137 |
+
+Hero `<img>` 가 스트리밍 청크 안에 들어가 브라우저가 발견하지 못했다. 요청 시작이 534ms → 512ms 로 사실상 그대로였다.
+이미지 `src` 는 정적인데 문구와 한 컴포넌트에 묶여 있던 것이 원인이다.
+
+경계를 나누자 이미지가 첫 플러시(약 10ms)에 들어가고 요청 시작이 **39ms** 로 앞당겨졌다.
+
+**같은 원인이 UX 문제이기도 했다.** Hero 가 데이터 경계 안에 있어 화면 전체가 로딩 문구로 덮였다.
+사용자 관찰("hero section 밑에 상품리스트쪽에만 로딩 UI가 보여야 할 것 같다")이 성능 병목과 같은 지점을 가리켰다.
+
+A2 에서 CLS 0 → 0.0066 회귀가 생겼다. → 변경 2 에서 다룬다.
+
+### 변경 2 — Hero 문구 카드의 자리를 확정한다 (변경 1 의 회귀 수습)
+
+**왜**
+
+- 관찰: A2 에서 CLS 가 0 → 0.0066. Lighthouse `layout-shifts` 가 지목한 요소는 `div.copy` 하나이고, 최종 높이는 159px 였다.
+- 가설: `.copy` 는 `inset: auto auto …` 로 **좌하단에 고정**돼 있어 내용이 길어지면 위로 자란다. fallback 이 실제 문구보다 짧으면 교체 순간 카드 윗변이 움직인다.
+- 선택: 변경 1 을 되돌리는 대신 fallback 쪽을 맞춘다. LCP −523ms 를 포기할 이유가 없다.
+
+**AS-IS**
+
+fallback 이 제목을 한 줄로만 잡았다. 실제 제목은 두 줄로 감긴다.
+
+**TO-BE**
+
+두 번 시도했다. **1차는 절반만 고쳤다.**
+
+| 단계 | 변경                                      | CLS        | LCP 범위 |
+| ---- | ----------------------------------------- | ---------- | -------- |
+| A2   | —                                         | 0.0066     | 77 ms    |
+| A3   | fallback 을 실제와 같은 태그·줄 수로 맞춤 | **0.0031** | 34 ms    |
+| A4   | `.copy` 에 `min-height` 를 확정           | **0**      | **8 ms** |
+
+A3 로도 육안에 이동이 보였다. 막대 높이 `1em` 과 실제 글자 줄 높이(`line-height 1.08` + 폰트 메트릭)가
+정확히 같지 않아 몇 px 씩 남았고, 문구 길이가 바뀌면 다시 어긋나는 방식이었다.
+
+A4 는 문구 길이에 의존하지 않는다. 실제 문구가 차지할 수 있는 최대치를 `.copy` 자체에 잡아 두면
+두 상태가 같은 박스를 쓴다.
+
+```css
+.copy {
+  min-height: calc(clamp(18px, 3vw, 32px) * 2 + 16px + 6px + clamp(28px, 4vw, 52px) * 2.16 + 10px + 26px * 2);
+}
+```
+
+`clamp()` 를 그대로 써서 브레이크포인트가 바뀌어도 같은 비율로 따라간다.
+실제 문구가 이보다 짧아 로딩 완료 상태에 여백이 생기지만, 이동이 없는 쪽을 택했다.
+
+**확인**
+
+부수 효과로 **측정 자체가 안정됐다.** 리플로우가 사라지자 LCP 범위가 34ms → 8ms 로 좁아졌다.
+
+### 가설 A 종료 — Before 대비
+
+| 지표       | Before | After A | 변화               |
+| ---------- | ------ | ------- | ------------------ |
+| FCP 중앙값 | 618 ms | 83 ms   | **−535 ms**        |
+| LCP 중앙값 | 701 ms | 163 ms  | **−538 ms (−77%)** |
+| CLS        | 0      | 0       | 유지               |
+| LCP 범위   | 27 ms  | 8 ms    | 계측 안정          |
+
+변화폭 538ms 는 Before 범위 27ms 의 **20배**다. 측정 흔들림으로 설명되지 않는다.
+
+LCP 구간이 다음 표적을 가리킨다.
+
+| 구간                   | Before | After A | 비중    |
+| ---------------------- | ------ | ------- | ------- |
+| Element render delay   | 107    | **104** | **64%** |
+| Resource load delay    | 16     | 29      | 18%     |
+| Resource load duration | 89     | 28      | 17%     |
+| Time to first byte     | 513    | 4       | 2%      |
+
+`Element render delay` 가 최대 조각이 됐다. 3840×2160(8메가픽셀) JPEG 의 디코딩 비용으로 보인다.
+전송량을 줄이면 전송 구간(28ms)과 디코딩(104ms)이 함께 줄어들 것이다 — 가설 B 에서 다룬다.
+
 ---
 
 ## 3. 개입하지 않기로 한 것
