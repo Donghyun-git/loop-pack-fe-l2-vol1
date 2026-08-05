@@ -1134,11 +1134,104 @@ const data = current.data ?? fallback.data;
 
 ## 4. metadata / Open Graph 증거
 
-| 상황                    | 증거 | 확인 결과 |
-| ----------------------- | ---- | --------- |
-| normal                  |      |           |
-| 정상 empty (성공 + 0건) |      |           |
-| metadata query failure  |      |           |
+### 3종 document 증거
+
+모두 production build 의 document 응답에서 뽑았다. `APP_ORIGIN` 은 build 와 runtime 에 같은 값을 넣었다.
+
+| 상황                       | 재현                                           | `<title>`                              | `og:image`                             |
+| -------------------------- | ---------------------------------------------- | -------------------------------------- | -------------------------------------- |
+| **normal** (홈)            | `APP_ORIGIN=http://localhost:3000`             | `매일 새롭게 발견하는 취향 · Commerce` | `/images/products/p6.jpg`              |
+| **normal** (목록)          | `/products`                                    | `상품 목록 · Commerce`                 | `/images/products/p26.jpg`             |
+| **정상 empty**             | `/products?q=가방` (0건)                       | `"가방" 검색 결과 · Commerce`          | **fallback** `hero-landscape-1280.jpg` |
+| **metadata query failure** | `APP_ORIGIN=http://127.0.0.1:9` 로 build·start | **`Commerce`** (root default)          | fallback                               |
+
+**세 상황이 서로 다른 fallback 을 보인다.**
+
+- 정상 empty 는 **조건을 설명하는 title 을 만들되** Open Graph 이미지만 fallback 으로 둔다.
+  결과가 0개라 첫 상품 이미지가 없기 때문이다.
+- query failure 는 **페이지별 title 자체를 만들지 않는다.** `generateMetadata` 가 빈 객체를 돌려
+  root 의 `title.default` 가 그대로 쓰인다. 빈 문자열을 돌려줬다면 `<title></title>` 이 됐을 것이다.
+
+검색어·카테고리·페이지를 준 요청(`/products?q=가방&category=fashion&page=2`)도 query failure 에서는
+title 이 `Commerce` 다. 조회에 실패했으므로 **URL 조건만 보고 title 을 조립하지 않는다.**
+데이터 없이 만든 제목은 근거가 없다.
+
+#### query failure 에서도 페이지는 살아 있다
+
+| 경로        | status | TTFB |
+| ----------- | ------ | ---- |
+| `/`         | 200    | 7 ms |
+| `/products` | 200    | 8 ms |
+
+초기 HTML 에 `<h1>추천 상품 둘러보기</h1>` 와 `href="/products"` 가 그대로 남는다.
+변경 1 에서 페이지 제목·설명을 데이터 대기 밖으로 뺐기 때문에, 데이터 조회가 전부 실패해도
+페이지 구조와 탐색 수단은 유지된다. 목록 영역만 실패 UI 로 바뀐다.
+
+> query failure 재현에서는 `og:image` 가 `http://127.0.0.1:9/...` 로 나온다.
+> `metadataBase` 가 `APP_ORIGIN` 을 쓰기 때문이며 재현 절차상 정상이다.
+> 실제 배포에서는 `APP_ORIGIN` 이 진짜 도메인이어야 공유 이미지가 유효하다.
+> 이 문서의 localhost Open Graph URL 은 배포 증거가 아니다.
+
+### 초기 HTML — JavaScript 실행 전에 무엇이 있는가
+
+production build 의 document 응답을 그대로 받아 확인했다(`curl`). 브라우저에서는 View Source 로 같은 것을 본다.
+
+**홈** — 랜드마크, 제목, 주요 링크, 대체 텍스트가 모두 들어 있다.
+
+```html
+<header class="week05-header">
+  <a href="/">…</a>
+  <nav aria-label="주요 메뉴"><a href="/products">…</a></nav>
+</header>
+<main>
+  <h1>추천 상품 둘러보기</h1>
+  <section aria-label="이번 주의 추천 배너">
+    <img alt="햇빛이 드는 베이지 톤 공간에 놓인 가죽 토트백, 흰 스니커즈, 니트와 도자기 화병" … />
+    <h2>매일 새롭게 발견하는 취향</h2>
+  </section>
+  <h2>카테고리</h2>
+  <a href="/products?category=casual">…</a> … 5개
+  <h2>인기 상품</h2>
+  <img alt="메이커스 투명케이스" … />
+</main>
+```
+
+**상품 목록** — `<main>` · `<h1>상품 목록</h1>` · `aria-label="상품 검색 결과"` 가 있다.
+
+| 요구                             | 확인                                                                 |
+| -------------------------------- | -------------------------------------------------------------------- |
+| 하나의 명확한 `h1`               | 홈 `추천 상품 둘러보기` · 목록 `상품 목록` — 각 페이지에 정확히 하나 |
+| 페이지 설명                      | `h1` 바로 아래 문단                                                  |
+| 주요 콘텐츠·탐색 역할이 마크업에 | `<header>` · `<nav aria-label>` · `<main>`                           |
+| 주요 이동은 `href` 링크          | 헤더 2개, 카테고리 5개 모두 `<a href>`                               |
+| 의미 있는 이미지의 대체 텍스트   | Hero·상품 카드 모두 있음                                             |
+
+#### Hero `alt` 를 빈 문자열로 두지 않은 이유
+
+starter 는 `alt=""` 로 시작한다. 장식용 이미지라면 맞는 선택이지만 이 이미지는 상품을 보여준다.
+위에 겹치는 문구("매일 새롭게 발견하는 취향")는 **슬로건이지 이미지 설명이 아니다.**
+`alt=""` 로 두면 화면을 보지 못하는 사용자는 배너에 무엇이 놓여 있는지 알 수 없다.
+
+`<section aria-label="이번 주의 추천 배너">` 로 영역 이름을 따로 주었으므로,
+`alt` 는 영역 이름을 반복하지 않고 사진의 내용만 서술한다.
+
+### 페이지별 metadata 규칙이 적용되는지
+
+| URL                                              | `<title>`                              | `description`                           |
+| ------------------------------------------------ | -------------------------------------- | --------------------------------------- |
+| `/`                                              | `매일 새롭게 발견하는 취향 · Commerce` | `지금 가장 사랑받는 상품을 만나보세요.` |
+| `/products`                                      | `상품 목록 · Commerce`                 | `정렬 최신순 · 총 30개.`                |
+| `/products?q=가방`                               | `"가방" 검색 결과 · Commerce`          | `정렬 최신순 · 조건에 맞는 상품 0개.`   |
+| `/products?category=fashion&sort=popular&page=2` | `패션 · 2페이지 · Commerce`            | `카테고리 패션 · 정렬 인기순 · 총 6개.` |
+
+- 검색어가 있으면 title 에 먼저 들어간다
+- category·sort 는 description 으로 간다
+- 2페이지 이상이면 title 에 페이지 번호가 붙는다
+- `· Commerce` 는 root 의 `title.template` 이 붙인 것이다
+
+**shallow merge 대응 확인** — 위 네 경우 모두 `og:site_name`·`og:locale`·`og:type` 이 살아 있다.
+페이지의 `openGraph` 는 루트 `openGraph` 를 통째로 덮으므로, 각 페이지가 `COMMON_OPEN_GRAPH` 를
+펼쳐 넣지 않았다면 이 세 필드는 사라졌을 것이다.
 
 **서버 측 호출 계수** (`src/app/api/**` 수정 금지 제약하의 대안)
 
@@ -1171,12 +1264,44 @@ URL·options 가 모두 같은 native `fetch` 를 Next 가 memoization 하기 �
 
 **계측 제거**: `src/middleware.ts` 파일 하나를 지우면 끝난다. 앱 코드에는 흔적이 남지 않는다.
 
-**일반 UA vs `facebookexternalhit`**
+### 일반 UA vs `facebookexternalhit` — 이 단계의 핵심 발견
 
-| UA                  | `time_starttransfer` | `time_total` |
-| ------------------- | -------------------- | ------------ |
-| normal              |                      |              |
-| facebookexternalhit |                      |              |
+`generateMetadata` 는 서버에서 실행되고 `<head>` 는 문서 맨 앞이므로,
+metadata 가 API 를 기다리면 그만큼 응답이 늦어진다 — 라고 예상하고 시작했다.
+**측정이 그 예상을 반증했다.**
+
+| 경로        | UA                    | `time_starttransfer` | `time_total` |
+| ----------- | --------------------- | -------------------- | ------------ |
+| `/`         | normal                | **0.008 s**          | 0.512 s      |
+| `/`         | `facebookexternalhit` | **0.518 s**          | 0.520 s      |
+| `/products` | normal                | **0.009 s**          | 0.511 s      |
+| `/products` | `facebookexternalhit` | **0.510 s**          | 0.510 s      |
+
+**첫 청크에 무엇이 들어 있는가**
+
+| UA                    | 첫 0.1초 수신량 | 그 안에 `<title>` | 최종 HTML 의 `<title>` |
+| --------------------- | --------------- | ----------------- | ---------------------- |
+| normal                | 15,810 B        | **없음**          | 있음                   |
+| `facebookexternalhit` | **0 B**         | —                 | 있음                   |
+
+Next 16 이 User-Agent 를 보고 스트리밍 여부를 가른다.
+
+- **일반 브라우저** — 본문 껍데기를 먼저 흘려보내고 `generateMetadata` 가 끝나면 `<head>` 에 나중에 꽂는다.
+  브라우저는 스트리밍 중 `<head>` 삽입을 처리할 수 있다. **TTFB 8ms 유지.**
+- **크롤러** — 스트리밍을 다루지 못하는 클라이언트로 보고 metadata 가 완성될 때까지 응답을 붙든다.
+  미리보기 카드를 만드는 것이 목적이므로 기다릴 이유가 있다. **TTFB 518ms.**
+
+**그래서 비용을 내는 쪽은 사용자가 아니라 크롤러다.**
+
+| 단계                   | 일반 사용자 TTFB | 크롤러 TTFB |
+| ---------------------- | ---------------- | ----------- |
+| Before                 | 513 ms           | 513 ms      |
+| 변경 1 (렌더링 경계)   | 4 ms             | 4 ms        |
+| 변경 5 (동적 metadata) | **8 ms**         | **518 ms**  |
+
+변경 1 에서 없앤 500ms 가 **크롤러에게만** 돌아왔다.
+동적 metadata 의 이점(검색·공유에서 페이지가 구분됨)을 얻으면서 사용자 응답 시점은 지키는 거래다.
+Next 가 UA 로 그 판단을 대신하고 있었고, 우리가 한 일은 그 위에 올라탄 것뿐이다.
 
 ---
 
