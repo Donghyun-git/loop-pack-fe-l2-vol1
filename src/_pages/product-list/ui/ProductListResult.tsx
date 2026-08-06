@@ -123,12 +123,6 @@ export function ProductListResult({ query, page, onPageChange }: ProductListProp
 
   return (
     <section className="week05-section" aria-label="상품 검색 결과" aria-busy={updating}>
-      {updating && (
-        <p className={styles.status} role="status">
-          조건을 바꿔 다시 불러오는 중입니다… 아래는 이전 결과입니다.
-        </p>
-      )}
-
       {updateFailed && (
         <p role="alert">
           목록을 갱신하지 못했습니다. {error.message} 아래는 이전 결과입니다.
