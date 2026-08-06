@@ -321,7 +321,9 @@ DevTools 패널로는 No throttling 이 재현되지 않아(위 "계측 함정" 
 
 ### 1-1. 홈 cold load — FCP / LCP / CLS (공식: No throttling)
 
-#### Lighthouse CLI 13.4.1 · headless · warm-up 1회 후 5회 · 매 회 새 프로필
+#### Lighthouse CLI 13.4.1 · **Mobile** 412×823 @1.75 · headless · warm-up 1회 후 5회 · 매 회 새 프로필
+
+이 표가 **공식 지표**다. 아래 Desktop 표와 1-1-보조의 Slow 4G 표는 부수 지표다.
 
 | 회차       | FCP (ms) | LCP (ms) | CLS   |
 | ---------- | -------- | -------- | ----- |
