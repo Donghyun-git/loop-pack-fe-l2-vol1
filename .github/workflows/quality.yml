@@ -39,10 +39,26 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # 1단계 최적화: 지목한 병목 하나에만 대응한다.
+      #
+      # Before 측정에서 이 스텝이 단일 최장 구간이었다(중앙값 23s, job 창의 약 25%).
+      # cold 23s / warm 26s 로 조건과 무관하게 같은 값이 나오는데, ~/.cache/ms-playwright
+      # 가 캐시되지 않아 매 실행이 브라우저를 새로 받기 때문이다.
+      #
+      # --only-shell 은 풀 Chrome for Testing 바이너리를 받지 않고 headless shell 만 받는다.
+      # dry-run 대조 결과 받는 항목이 넷에서 셋으로 줄고, 빠지는 것이 정확히 풀 브라우저다.
+      # playwright.config.ts 의 devices['Desktop Chrome'] 는 channel 을 지정하지 않으므로
+      # (1.62.1 에서 확인) headless 실행은 headless shell 로 뜬다.
+      #
+      # 브라우저 바이너리를 캐시하지 않는다. Playwright 공식 문서가 권장하지 않고
+      # (복원 비용이 다운로드 비용과 비슷하고 OS 의존성은 캐시 대상이 아니다),
+      # 이 레포의 Before 측정에서도 pnpm 캐시가 아낀 시간이 3초로 지터에 묻혔다.
+      #
+      # --with-deps 는 유지한다. 이번 커밋은 전략 하나만 적용해 인과를 분명히 둔다.
       - name: Install Playwright Chromium when used
         run: |
           if pnpm exec playwright --version >/dev/null 2>&1; then
-            pnpm exec playwright install --with-deps chromium
+            pnpm exec playwright install --with-deps --only-shell chromium
           fi
       # --- 계측을 위한 분리: `pnpm check` 의 5개 명령을 스텝으로 편다 ---
       #
